@@ -97,29 +97,36 @@ fun UploadScreen() {
             }
 
             LaunchedEffect(chk.value) {
-                if (chk.value) {
-                    var codePart = code.value.toRequestBody("text/plain".toMediaType())
-                    val bitmap = image.value
-                    if ( bitmap != null ) {
-                        // 1. 캐시 디렉토리에 임시파일 생성 (현재는 0byte 파일임)
-                        val file = File(context.cacheDir, "img_${System.currentTimeMillis()}.jpg")
-                        // 2. bitmap 을 파일로 저장 jpg 포맷의 퀄리티 100으로 저장함(현재는 파일사이즈 변경)
-                        FileOutputStream(file).use { outputStream ->
-                            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                        }
+                try {
+                    if (chk.value) {
+                        var codePart = code.value.toRequestBody("text/plain".toMediaType())
+                        val bitmap = image.value
+                        if (bitmap != null) {
+                            // 1. 캐시 디렉토리에 임시파일 생성 (현재는 0byte 파일임)
+                            val file =
+                                File(context.cacheDir, "img_${System.currentTimeMillis()}.jpg")
+                            // 2. bitmap 을 파일로 저장 jpg 포맷의 퀄리티 100으로 저장함(현재는 파일사이즈 변경)
+                            FileOutputStream(file).use { outputStream ->
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                            }
 
-                        // 3. 생성된 파일을 requestPart로 변경
-                        val fileRequest = file.asRequestBody(("image/jpeg".toMediaType()))
-                        val filePart = MultipartBody.Part.createFormData("image", file.name, fileRequest)
+                            // 3. 생성된 파일을 requestPart로 변경
+                            val fileRequest = file.asRequestBody(("image/jpeg".toMediaType()))
+                            val filePart =
+                                MultipartBody.Part.createFormData("image", file.name, fileRequest)
 
-                        // 4. 백엔드 호출하기
-                        val response = RetrofitInstance.api.uploadImage(image=filePart, code=codePart)
-                        Log.d("foo", "so far...")
-                        if ( response.result == 1 ) {
-                            Toast.makeText(context, "Upload 성공", Toast.LENGTH_SHORT).show()
+                            // 4. 백엔드 호출하기
+                            val response =
+                                RetrofitInstance.api.uploadImage(image = filePart, code = codePart)
+                            Log.d("foo", "so far...")
+                            if (response.result == 1) {
+                                Toast.makeText(context, "Upload 성공", Toast.LENGTH_SHORT).show()
+                            }
                         }
+                        chk.value = false
                     }
-                    chk.value = false
+                } catch (e : Exception) {
+                    Log.d("foo", e.localizedMessage)
                 }
             }
         }

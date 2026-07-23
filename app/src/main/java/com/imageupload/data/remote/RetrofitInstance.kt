@@ -1,6 +1,5 @@
 package com.imageupload.data.remote
 
-import com.imageupload.data.model.remote.ApiService
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 

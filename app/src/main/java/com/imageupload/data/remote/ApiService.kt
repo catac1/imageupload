@@ -1,4 +1,4 @@
-package com.imageupload.data.model.remote
+package com.imageupload.data.remote
 
 import com.imageupload.data.model.UploadResponse
 import okhttp3.MultipartBody
