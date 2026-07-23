@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -20,7 +21,7 @@ import org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence
 class MqttService: Service() {
 
 //    private val MQTT_URL = "tcp://192.168.0.12:1883"
-    private val MQTT_URL = "tcp://10.174.96.119::31883"
+    private val MQTT_URL = "tcp://10.174.96.119:31883"
     private val MQTT_CHANNEL_ID = "mqtt_channel"
     private val MQTT_MESSAGE_CHANNEL_ID = "mqtt_new_channel"
     private val TOPIC = "pknu/class207"
@@ -28,6 +29,14 @@ class MqttService: Service() {
 
     // 지연 연결 => 현재는 객체가 생성되지 않지만 특정시점에 접속할 예정
     private lateinit var mqttClient: MqttClient
+
+    private val binder = LocalBinder()
+
+    inner class LocalBinder: Binder() {
+        fun getService() : MqttService {
+            return this@MqttService
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -55,7 +64,7 @@ class MqttService: Service() {
     }
 
     // 기능을 변경
-    override fun onBind(p0: Intent?): IBinder? = null
+    override fun onBind(p0: Intent?): IBinder = binder
 
     override fun onUnbind(intent: Intent?): Boolean {
         return super.onUnbind(intent)
