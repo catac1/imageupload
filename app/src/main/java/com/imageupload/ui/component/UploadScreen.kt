@@ -3,6 +3,7 @@ package com.imageupload.ui.component
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -113,7 +114,7 @@ fun UploadScreen() {
 
                         // 4. 백엔드 호출하기
                         val response = RetrofitInstance.api.uploadImage(image=filePart, code=codePart)
-
+                        Log.d("foo", "so far...")
                         if ( response.result == 1 ) {
                             Toast.makeText(context, "Upload 성공", Toast.LENGTH_SHORT).show()
                         }
