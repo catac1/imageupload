@@ -1,5 +1,6 @@
 package com.imageupload
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,11 +21,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.core.content.ContextCompat
+import com.imageupload.service.MqttService
 import com.imageupload.ui.component.UploadScreen
 import com.imageupload.ui.theme.ImageUploadTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        ContextCompat.startForegroundService(
+            this,
+            Intent(this, MqttService::class.java)
+        )
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {

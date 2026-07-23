@@ -12,6 +12,8 @@ kotlin = "2.4.10"
 composeBom = "2026.06.01"
 okhttp = "5.4.0"
 retrofit = "3.0.0"
+paho-client = "1.2.5"
+paho-android = "1.1.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -33,6 +35,8 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 androidx-compose-material3-adaptive-navigation-suite = { group = "androidx.compose.material3", name = "material3-adaptive-navigation-suite" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
+paho-client = { module = "org.eclipse.paho:org.eclipse.paho.client.mqttv3", version.ref = "paho-client" }
+paho-android = { module = "org.eclipse.paho:org.eclipse.paho.android.service", version.ref = "paho-android" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

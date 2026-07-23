@@ -50,6 +50,8 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.okhttp)
     implementation(libs.converter.gson)
+    implementation(libs.paho.client)
+    implementation(libs.paho.android)
     implementation(libs.coil.compose)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
