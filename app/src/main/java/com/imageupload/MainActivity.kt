@@ -1,10 +1,13 @@
 package com.imageupload
 
+import android.Manifest
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -27,11 +30,43 @@ import com.imageupload.ui.component.UploadScreen
 import com.imageupload.ui.theme.ImageUploadTheme
 
 class MainActivity : ComponentActivity() {
+
+    // 1. 서비스 시작
+    private fun startMqttService() {
+        val serviceIntent = Intent(this, MqttService::class.java)
+        if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
+    }
+
+    // 2. 권한 확인용 런처 생성
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if ( isGranted ) {
+            // 권한 설정 확인
+            startMqttService()
+        } else {
+            // 권한 설정 취소
+            startMqttService()
+        }
+    }
+
+    // 3. 권한 설정 요청
+    private fun checkPermissionAndService() {
+        // API 33 이상
+        if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ) {
+            // n개 이상의 권한 요청 가능
+            requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            startMqttService()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        ContextCompat.startForegroundService(
-            this,
-            Intent(this, MqttService::class.java)
-        )
+        checkPermissionAndService()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
