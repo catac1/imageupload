@@ -1,7 +1,5 @@
 package com.imageupload.ui.component
 
-import android.util.Log
-import android.widget.Space
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -16,56 +14,70 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.imageupload.MqttMessageManger
+import com.imageupload.service.MqttService
 
 @Composable
-fun ChatScreen() {
-    val context = LocalContext.current
-    var msg by remember { mutableStateOf(value = "") }
-    var chk by remember { mutableStateOf(value = false) }
-    var messages by remember { mutableStateOf(listOf<String>())}
-    var topic by remember { mutableStateOf("pknu/class207")}
+fun ChatScreen(mqttService: MqttService?) {
+    val msg = remember { mutableStateOf("") }
+    val messages = remember { mutableStateOf(listOf<String>()) }
+    val topic = remember { mutableStateOf("pknu/class207") }
+    val isConnected = remember(mqttService) { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().padding(24.dp)) {
         Column( modifier = Modifier.fillMaxSize()) {
             Text("채팅")
+            Text(
+                when {
+                    mqttService == null -> "MQTT 서비스 연결 중"
+                    isConnected.value -> "MQTT 연결됨"
+                    else -> "MQTT 브로커 연결 중"
+                }
+            )
             Spacer(modifier = Modifier.size(16.dp))
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("보낼 메시지") },
-                value = msg,
-                onValueChange = { msg = it },
+                value = msg.value,
+                onValueChange = { msg.value = it },
                 singleLine = true
             )
 
             Button(
                 modifier = Modifier.fillMaxWidth(),
+                enabled = isConnected.value && msg.value.isNotBlank(),
                 onClick = {
-                    if ( !msg.none()) {
-                        MqttMessageManger.publish(topic, msg)
+                    if (mqttService?.publishMqttMessage(topic.value, msg.value) == true) {
+                        msg.value = ""
                     }
                 }
             ) {
                 Text("보내기")
             }
 
-            LaunchedEffect(Unit) {
-                MqttMessageManger.messageFlow.collect { newMsg ->
+            LaunchedEffect(mqttService) {
+                mqttService?.messageFlow?.collect { newMsg ->
                     if ( newMsg.isNotEmpty() ) {
-                        messages = messages + newMsg
+                        messages.value = messages.value + newMsg
+                    }
+                }
+            }
+
+            LaunchedEffect(mqttService) {
+                if (mqttService == null) {
+                    isConnected.value = false
+                } else {
+                    mqttService.connectionState.collect { connected ->
+                        isConnected.value = connected
                     }
                 }
             }
 
             LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                items(messages) { msg ->
+                items(messages.value) { msg ->
                     Text(msg, modifier = Modifier.padding(4.dp))
                 }
             }

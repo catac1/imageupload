@@ -1,9 +1,13 @@
 package com.imageupload
 
 import android.Manifest
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,6 +35,19 @@ import com.imageupload.ui.component.UploadScreen
 import com.imageupload.ui.theme.ImageUploadTheme
 
 class MainActivity : ComponentActivity() {
+
+    private var mqttService by mutableStateOf<MqttService?>(null)
+    private var isBindRequested = false
+
+    private val mqttServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            mqttService = (service as? MqttService.LocalBinder)?.getService()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            mqttService = null
+        }
+    }
 
     // 1. 서비스 시작
     private fun startMqttService() {
@@ -72,15 +89,36 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ImageUploadTheme {
-                ImageUploadApp()
+                ImageUploadApp(mqttService)
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (!isBindRequested) {
+            val serviceIntent = Intent(this, MqttService::class.java)
+            isBindRequested = bindService(
+                serviceIntent,
+                mqttServiceConnection,
+                Context.BIND_AUTO_CREATE
+            )
+        }
+    }
+
+    override fun onStop() {
+        if (isBindRequested) {
+            unbindService(mqttServiceConnection)
+            isBindRequested = false
+        }
+        mqttService = null
+        super.onStop()
     }
 }
 
 @PreviewScreenSizes
 @Composable
-fun ImageUploadApp() {
+fun ImageUploadApp(mqttService: MqttService? = null) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.PROFILE) }
 
     NavigationSuiteScaffold(
@@ -106,7 +144,7 @@ fun ImageUploadApp() {
                     UploadScreen()
                 }
                 AppDestinations.PROFILE -> {
-                    ChatScreen()
+                    ChatScreen(mqttService)
                 }
                 else -> {
                     Greeting(

@@ -13,8 +13,13 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.imageupload.MainActivity
-import com.imageupload.MqttMessageManger
 import com.imageupload.R
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
 import org.eclipse.paho.client.mqttv3.MqttCallback
 import org.eclipse.paho.client.mqttv3.MqttClient
@@ -33,6 +38,14 @@ class MqttService: Service() {
 
     // 지연 연결 => 현재는 객체가 생성되지 않지만 특정시점에 접속할 예정
     private lateinit var mqttClient: MqttClient
+    @Volatile
+    private var isConnecting = false
+
+    private val _messageFlow = MutableSharedFlow<String>(replay = 1)
+    val messageFlow: SharedFlow<String> = _messageFlow.asSharedFlow()
+
+    private val _connectionState = MutableStateFlow(false)
+    val connectionState: StateFlow<Boolean> = _connectionState.asStateFlow()
 
     private val binder = LocalBinder()
 
@@ -47,11 +60,6 @@ class MqttService: Service() {
         Log.d("mqtt", "MQTT onCreate")
         // 1. 채널설정
         createNotificationChannel()
-
-        // 2. Manager의 publish를 실행했을때 연결될 함수 설정
-        MqttMessageManger.onPublishRequested = { topic, payload ->
-            publishMqttMessage(topic, payload)
-        }
     }
 
     override fun onStartCommand(
@@ -80,6 +88,8 @@ class MqttService: Service() {
     }
 
     override fun onDestroy() {
+        isConnecting = false
+        _connectionState.value = false
         try {
             if ( ::mqttClient.isInitialized ) {
                 if ( mqttClient.isConnected ) {
@@ -137,6 +147,9 @@ class MqttService: Service() {
     }
 
     private fun connectMQTT() {
+        if (isConnecting) return
+        isConnecting = true
+
         // 비동기로 접속 하기
         Thread {
             try {
@@ -157,6 +170,7 @@ class MqttService: Service() {
                 mqttClient.setCallback(object : MqttCallback {
 
                     override fun connectionLost(cause: Throwable?) {
+                        _connectionState.value = false
                     }
 
                     override fun messageArrived(
@@ -167,7 +181,7 @@ class MqttService: Service() {
                             val messageString = message.toString()
                             val fullMessage = "[${topic}] : $messageString"
                             Log.d("mqtt arrived", fullMessage)
-                            MqttMessageManger.emitMessage(fullMessage)
+                            _messageFlow.tryEmit(fullMessage)
 
                             showNewMessageNotification(topic, message)
                         }
@@ -179,29 +193,33 @@ class MqttService: Service() {
 
                 mqttClient.connect(option)
                 mqttClient.subscribe(TOPIC)
+                _connectionState.value = true
             } catch ( e : Exception) {
+                _connectionState.value = false
                 Log.d("mqtt", e.message.toString())
                 e.printStackTrace()
+            } finally {
+                isConnecting = false
             }
         }.start()
     }
 
     // 메시지 보내기
-    fun publishMqttMessage(topic: String, payload: String) {
-        try {
-            if ( mqttClient.isConnected ) {
-                // 백엔드에 데이터를 저장하기
+    fun publishMqttMessage(topic: String, payload: String): Boolean {
+        if (!::mqttClient.isInitialized || !mqttClient.isConnected) return false
 
-                // 메시지는 String 타입을 byte[] 배열로 변경해야 함
-                val message = MqttMessage(payload.toByteArray()).apply {
-                    this.qos = 1 // QoS 0, 1, 2 숫자가 낮을 수 록 메시지 전송 안정성이 약함
-                    this.isRetained = false // 서버에 메시지를 저장할지 유무
-                }
-                // 실제로 메시지 보내기(토픽, 보낼메시지)
-                mqttClient.publish(topic, message)
+        return try {
+            // 메시지는 String 타입을 byte[] 배열로 변경해야 함
+            val message = MqttMessage(payload.toByteArray()).apply {
+                this.qos = 1 // QoS 0, 1, 2 숫자가 낮을 수 록 메시지 전송 안정성이 약함
+                this.isRetained = false // 서버에 메시지를 저장할지 유무
             }
+            // 실제로 메시지 보내기(토픽, 보낼메시지)
+            mqttClient.publish(topic, message)
+            true
         } catch ( e: Exception ) {
             e.printStackTrace()
+            false
         }
     }
 
