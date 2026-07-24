@@ -26,6 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.core.content.ContextCompat
 import com.imageupload.service.MqttService
+import com.imageupload.ui.component.ChatScreen
 import com.imageupload.ui.component.UploadScreen
 import com.imageupload.ui.theme.ImageUploadTheme
 
@@ -80,7 +81,7 @@ class MainActivity : ComponentActivity() {
 @PreviewScreenSizes
 @Composable
 fun ImageUploadApp() {
-    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
+    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.PROFILE) }
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
@@ -103,6 +104,9 @@ fun ImageUploadApp() {
             when (currentDestination) {
                 AppDestinations.HOME -> {
                     UploadScreen()
+                }
+                AppDestinations.PROFILE -> {
+                    ChatScreen()
                 }
                 else -> {
                     Greeting(

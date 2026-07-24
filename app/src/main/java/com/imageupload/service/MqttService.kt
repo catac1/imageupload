@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.imageupload.MqttMessageManger
 import com.imageupload.R
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
 import org.eclipse.paho.client.mqttv3.MqttCallback
@@ -43,6 +44,11 @@ class MqttService: Service() {
         Log.d("mqtt", "MQTT onCreate")
         // 1. 채널설정
         createNotificationChannel()
+
+        // 2. Manager의 publish를 실행했을때 연결될 함수 설정
+        MqttMessageManger.onPublishRequested = { topic, payload ->
+            publishMqttMessage(topic, payload)
+        }
     }
 
     override fun onStartCommand(
@@ -148,22 +154,22 @@ class MqttService: Service() {
                 mqttClient.setCallback(object : MqttCallback {
 
                     override fun connectionLost(cause: Throwable?) {
-                        TODO("Not yet implemented")
                     }
 
                     override fun messageArrived(
                         topic: String?,
                         message: MqttMessage?
                     ) {
-                        val messageString = message.toString()
-                        val fullMessage = "[${topic}] : $messageString"
-                        Log.d("mqtt", fullMessage)
+                        message?.let {
+                            val messageString = message.toString()
+                            val fullMessage = "[${topic}] : $messageString"
+                            Log.d("mqtt", fullMessage)
+                            MqttMessageManger.emitMessage(fullMessage)
+                        }
                     }
 
                     override fun deliveryComplete(token: IMqttDeliveryToken?) {
-                        TODO("Not yet implemented")
                     }
-
                 })
 
                 mqttClient.connect(option)
@@ -173,5 +179,22 @@ class MqttService: Service() {
                 e.printStackTrace()
             }
         }.start()
+    }
+
+    // 메시지 보내기
+    fun publishMqttMessage(topic: String, payload: String) {
+        try {
+            if ( mqttClient.isConnected ) {
+                // 메시지는 String 타입을 byte[] 배열로 변경해야 함
+                val message = MqttMessage(payload.toByteArray()).apply {
+                    this.qos = 1 // QoS 0, 1, 2 숫자가 낮을 수 록 메시지 전송 안정성이 약함
+                    this.isRetained = false // 서버에 메시지를 저장할지 유무
+                }
+                // 실제로 메시지 보내기(토픽, 보낼메시지)
+                mqttClient.publish(topic, message)
+            }
+        } catch ( e: Exception ) {
+            e.printStackTrace()
+        }
     }
 }
