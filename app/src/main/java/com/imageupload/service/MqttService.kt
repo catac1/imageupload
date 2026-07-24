@@ -2,7 +2,9 @@ package com.imageupload.service
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Binder
@@ -10,6 +12,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.imageupload.MainActivity
 import com.imageupload.MqttMessageManger
 import com.imageupload.R
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
@@ -163,8 +166,10 @@ class MqttService: Service() {
                         message?.let {
                             val messageString = message.toString()
                             val fullMessage = "[${topic}] : $messageString"
-                            Log.d("mqtt", fullMessage)
+                            Log.d("mqtt arrived", fullMessage)
                             MqttMessageManger.emitMessage(fullMessage)
+
+                            showNewMessageNotification(topic, message)
                         }
                     }
 
@@ -185,6 +190,8 @@ class MqttService: Service() {
     fun publishMqttMessage(topic: String, payload: String) {
         try {
             if ( mqttClient.isConnected ) {
+                // 백엔드에 데이터를 저장하기
+
                 // 메시지는 String 타입을 byte[] 배열로 변경해야 함
                 val message = MqttMessage(payload.toByteArray()).apply {
                     this.qos = 1 // QoS 0, 1, 2 숫자가 낮을 수 록 메시지 전송 안정성이 약함
@@ -196,5 +203,33 @@ class MqttService: Service() {
         } catch ( e: Exception ) {
             e.printStackTrace()
         }
+    }
+
+    private fun showNewMessageNotification(topic: String?, message: MqttMessage) {
+        // 1. 알림을 눌렀을때 어느 화면으로 표시할지 설정
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            // MainActivity에서 어느 메뉴를 선택할지(옵션)
+            putExtra("destination", "PROFILE")
+        }
+
+        // 2. 알림을 눌렀을때 실행 예약 ( 내용을 변경할 수 없고, 최신정보로 갱신 )
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        // 3. 알림 영역 구현 ( 채널은 MQTT_MESSAGE_CHANNEL_ID, HIGH )
+        val builder = NotificationCompat.Builder(this, MQTT_MESSAGE_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_email)
+            .setContentTitle("새 메시지 : ${topic}")
+            .setContentText(message.toString())
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+
+        // 4. 실제 알람표시
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val unique = System.currentTimeMillis().toInt()
+        notificationManager.notify(unique, builder.build())
     }
 }
