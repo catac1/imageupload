@@ -31,6 +31,7 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.core.content.ContextCompat
 import com.imageupload.service.MqttService
 import com.imageupload.ui.component.ChatScreen
+import com.imageupload.ui.component.SettingScreen
 import com.imageupload.ui.component.UploadScreen
 import com.imageupload.ui.theme.ImageUploadTheme
 
@@ -119,7 +120,7 @@ class MainActivity : ComponentActivity() {
 @PreviewScreenSizes
 @Composable
 fun ImageUploadApp(mqttService: MqttService? = null) {
-    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.PROFILE) }
+    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.SETTING) }
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
@@ -146,6 +147,9 @@ fun ImageUploadApp(mqttService: MqttService? = null) {
                 AppDestinations.PROFILE -> {
                     ChatScreen(mqttService)
                 }
+                AppDestinations.SETTING -> {
+                    SettingScreen()
+                }
                 else -> {
                     Greeting(
                         name = "Android",
@@ -167,6 +171,7 @@ enum class AppDestinations(
     HOME("Home", R.drawable.ic_home),
     FAVORITES("Favorites", R.drawable.ic_favorite),
     PROFILE("Profile", R.drawable.ic_account_box),
+    SETTING("Setting", R.drawable.ic_more_horiz),
 }
 
 @Composable
