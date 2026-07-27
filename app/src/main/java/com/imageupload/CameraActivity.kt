@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -13,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,6 +23,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -30,6 +33,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.imageupload.ui.theme.ImageUploadTheme
+import com.imageupload.util.extracted
 
 class CameraActivity : ComponentActivity() {
 
@@ -38,6 +42,7 @@ class CameraActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ImageUploadTheme {
+                var chk by remember { mutableStateOf(value = false) }
                 // 상태바 가리지 않기
                 Scaffold(modifier = Modifier.fillMaxSize())  { innerPadding ->
                     Surface(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -87,7 +92,28 @@ class CameraActivity : ComponentActivity() {
                             }) {
                                 Text("사진 촬영")
                             }
+
+                            Spacer(modifier = Modifier.fillMaxWidth())
+
+                            Button( onClick = {
+                                chk = true
+                            }) {
+                                Text("촬영 사진 업로드")
+                            }
+
                         }
+                        LaunchedEffect (chk) {
+                            try {
+                                if (chk) {
+                                    // 여기서 fastapi  호출하기
+                                    capturedImage?.let { extracted(this@CameraActivity, bitmap = it) }
+                                    chk = false
+                                }
+                            } catch (e: Exception) {
+                                Log.d("AAA", e.localizedMessage)
+                            }
+                        }
+
                     }
                 }
             }
